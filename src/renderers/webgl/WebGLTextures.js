@@ -189,6 +189,18 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		}
 
+		if (renderTarget.drawBuffersTextures) {
+			
+			for (var i = 0; i < renderTarget.drawBuffersTextures.length; i++) {
+
+				var texture = renderTarget.drawBuffersTextures[i];
+				var textureProperties = properties.get(texture);
+				_gl.deleteTexture(textureProperties.__webglTexture);
+
+			}
+
+		}
+
 		if ( renderTarget.isWebGLRenderTargetCube ) {
 
 			for ( var i = 0; i < 6; i ++ ) {
@@ -217,7 +229,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 	function setTexture2D( texture, slot ) {
 
 		var textureProperties = properties.get( texture );
-
+		// console.log(textureProperties)
 		if ( texture.isVideoTexture ) updateVideoTexture( texture );
 
 		if ( texture.version > 0 && textureProperties.__version !== texture.version ) {
@@ -622,14 +634,15 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 	// Render targets
 
 	// Setup storage for target texture and bind it to correct framebuffer
-	function setupFrameBufferTexture( framebuffer, renderTarget, attachment, textureTarget ) {
+	function setupFrameBufferTexture( framebuffer, renderTarget, attachment, textureTarget, texture ) {
 
-		var glFormat = utils.convert( renderTarget.texture.format );
-		var glType = utils.convert( renderTarget.texture.type );
+		var texture = texture !== undefined ? texture : properties.get(renderTarget.texture).__webglTexture
+
+		var glFormat = utils.convert(texture.format || renderTarget.texture.format);
+		var glType = utils.convert(texture.type || renderTarget.texture.type);
 		state.texImage2D( textureTarget, 0, glFormat, renderTarget.width, renderTarget.height, 0, glFormat, glType, null );
-		_gl.bindFramebuffer( _gl.FRAMEBUFFER, framebuffer );
-		_gl.framebufferTexture2D( _gl.FRAMEBUFFER, attachment, textureTarget, properties.get( renderTarget.texture ).__webglTexture, 0 );
-		_gl.bindFramebuffer( _gl.FRAMEBUFFER, null );
+		_gl.bindFramebuffer(_gl.FRAMEBUFFER, framebuffer);
+		_gl.framebufferTexture2D(_gl.FRAMEBUFFER, attachment, textureTarget, texture.__webglTexture || texture, 0 );
 
 	}
 
@@ -655,7 +668,7 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		}
 
-		_gl.bindRenderbuffer( _gl.RENDERBUFFER, null );
+		// _gl.bindRenderbuffer( _gl.RENDERBUFFER, null );
 
 	}
 
@@ -751,14 +764,17 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 		var renderTargetProperties = properties.get( renderTarget );
 		var textureProperties = properties.get( renderTarget.texture );
 
-		renderTarget.addEventListener( 'dispose', onRenderTargetDispose );
+		renderTarget.addEventListener('dispose', onRenderTargetDispose);
 
 		textureProperties.__webglTexture = _gl.createTexture();
 
 		info.memory.textures ++;
 
 		var isCube = ( renderTarget.isWebGLRenderTargetCube === true );
-		var isTargetPowerOfTwo = isPowerOfTwo( renderTarget );
+		var isTargetPowerOfTwo = isPowerOfTwo(renderTarget);
+		
+		var ext = extensions.get('WEBGL_draw_buffers');
+		var glAttachmentBase = ext ? ext.COLOR_ATTACHMENT0_WEBGL : _gl.COLOR_ATTACHMENT0;
 
 		// Setup framebuffer
 
@@ -801,17 +817,59 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		} else {
 
-			state.bindTexture( _gl.TEXTURE_2D, textureProperties.__webglTexture );
-			setTextureParameters( _gl.TEXTURE_2D, renderTarget.texture, isTargetPowerOfTwo );
-			setupFrameBufferTexture( renderTargetProperties.__webglFramebuffer, renderTarget, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_2D );
+			state.bindTexture(_gl.TEXTURE_2D, textureProperties.__webglTexture);
+			setTextureParameters(_gl.TEXTURE_2D, renderTarget.texture, isTargetPowerOfTwo);
+			setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, glAttachmentBase, _gl.TEXTURE_2D);
 
-			if ( textureNeedsGenerateMipmaps( renderTarget.texture, isTargetPowerOfTwo ) ) {
+			if (textureNeedsGenerateMipmaps(renderTarget.texture, isTargetPowerOfTwo)) {
 
-				generateMipmap( _gl.TEXTURE_2D, renderTarget.texture, renderTarget.width, renderTarget.height );
+				generateMipmap(_gl.TEXTURE_2D, renderTarget.texture, renderTarget.width, renderTarget.height);
 
 			}
 
-			state.bindTexture( _gl.TEXTURE_2D, null );
+			var numAttached = 1;
+
+			for (var i = 0; i < renderTarget.drawBuffersTextures.length; i++) {
+
+				if (numAttached >= capabilities.maxDrawBuffers) {
+
+					console.warn('WebGLRenderer: rendertarget has too many color textures - this GPU supports ' + capabilities.maxDrawBuffers);
+
+					break;
+
+				}
+
+				var texture = renderTarget.drawBuffersTextures[i];
+				var textureProperties = properties.get(texture);
+				textureProperties.__webglTexture = _gl.createTexture();
+				textureProperties.format = texture.format
+				textureProperties.type = texture.type
+
+				state.bindTexture(_gl.TEXTURE_2D, textureProperties.__webglTexture);
+				setTextureParameters(_gl.TEXTURE_2D, texture, isTargetPowerOfTwo);
+				setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, glAttachmentBase + numAttached, _gl.TEXTURE_2D, textureProperties);
+
+				numAttached++;
+
+			}
+
+			if (ext) {
+
+				var drawBuffers = [];
+
+				for (var i = 0; i < numAttached; i++) {
+
+					drawBuffers[i] = ext.COLOR_ATTACHMENT0_WEBGL + i;
+
+				}
+
+				ext.drawBuffersWEBGL(drawBuffers);
+
+			}
+
+			state.bindTexture(_gl.TEXTURE_2D, null);
+			_gl.bindFramebuffer(_gl.FRAMEBUFFER, null);
+			// _gl.bindRenderbuffer(_gl.RENDERBUFFER, null);
 
 		}
 
@@ -829,6 +887,20 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 
 		var texture = renderTarget.texture;
 		var isTargetPowerOfTwo = isPowerOfTwo( renderTarget );
+
+		for (var i = 0; i < renderTarget.drawBuffersTextures.length; i++) {
+
+			var texture = renderTarget.drawBuffersTextures[i];
+
+			if (textureNeedsGenerateMipmaps(texture, isTargetPowerOfTwo)) {
+
+				state.bindTexture(target, texture);
+				generateMipmap(target, texture, renderTarget.width, renderTarget.height);
+				state.bindTexture(target, null);
+
+			}
+
+		}
 
 		if ( textureNeedsGenerateMipmaps( texture, isTargetPowerOfTwo ) ) {
 

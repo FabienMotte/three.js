@@ -4574,11 +4574,25 @@
 
 		if ( options.minFilter === undefined ) options.minFilter = LinearFilter;
 
-		this.texture = new Texture( undefined, undefined, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding );
+		this.texture = new Texture(undefined, undefined, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding);
+
+		if (options.generateMipmaps === undefined) options.generateMipmaps = false;
+		this.texture.generateMipmaps = options.generateMipmaps;
 
 		this.depthBuffer = options.depthBuffer !== undefined ? options.depthBuffer : true;
 		this.stencilBuffer = options.stencilBuffer !== undefined ? options.stencilBuffer : true;
 		this.depthTexture = options.depthTexture !== undefined ? options.depthTexture : null;
+
+		this.drawBuffersTextures = [];
+
+		if (options.drawBuffersTextures !== undefined) {
+
+			for (var i = 0; i < options.drawBuffersTextures.length; i++) {
+
+				this.drawBuffersTextures[i] = options.drawBuffersTextures[i].clone();
+				
+			}
+		}
 
 	}
 
@@ -4594,7 +4608,7 @@
 
 				this.width = width;
 				this.height = height;
-
+				
 				this.dispose();
 
 			}
@@ -14678,6 +14692,9 @@
 		var floatFragmentTextures = !! extensions.get( 'OES_texture_float' );
 		var floatVertexTextures = vertexTextures && floatFragmentTextures;
 
+		var drawBuffers = extensions.get('WEBGL_draw_buffers');
+		var maxDrawBuffers = drawBuffers ? gl.getParameter(drawBuffers.MAX_DRAW_BUFFERS_WEBGL) : 1;
+
 		return {
 
 			getMaxAnisotropy: getMaxAnisotropy,
@@ -14698,7 +14715,9 @@
 
 			vertexTextures: vertexTextures,
 			floatFragmentTextures: floatFragmentTextures,
-			floatVertexTextures: floatVertexTextures
+			floatVertexTextures: floatVertexTextures,
+
+			maxDrawBuffers: maxDrawBuffers
 
 		};
 
@@ -19823,6 +19842,18 @@
 
 			}
 
+			if (renderTarget.drawBuffersTextures) {
+				
+				for (var i = 0; i < renderTarget.drawBuffersTextures.length; i++) {
+
+					var texture = renderTarget.drawBuffersTextures[i];
+					var textureProperties = properties.get(texture);
+					_gl.deleteTexture(textureProperties.__webglTexture);
+
+				}
+
+			}
+
 			if ( renderTarget.isWebGLRenderTargetCube ) {
 
 				for ( var i = 0; i < 6; i ++ ) {
@@ -19851,7 +19882,7 @@
 		function setTexture2D( texture, slot ) {
 
 			var textureProperties = properties.get( texture );
-
+			// console.log(textureProperties)
 			if ( texture.isVideoTexture ) updateVideoTexture( texture );
 
 			if ( texture.version > 0 && textureProperties.__version !== texture.version ) {
@@ -20256,14 +20287,15 @@
 		// Render targets
 
 		// Setup storage for target texture and bind it to correct framebuffer
-		function setupFrameBufferTexture( framebuffer, renderTarget, attachment, textureTarget ) {
+		function setupFrameBufferTexture( framebuffer, renderTarget, attachment, textureTarget, texture ) {
 
-			var glFormat = utils.convert( renderTarget.texture.format );
-			var glType = utils.convert( renderTarget.texture.type );
+			var texture = texture !== undefined ? texture : properties.get(renderTarget.texture).__webglTexture;
+
+			var glFormat = utils.convert(texture.format || renderTarget.texture.format);
+			var glType = utils.convert(texture.type || renderTarget.texture.type);
 			state.texImage2D( textureTarget, 0, glFormat, renderTarget.width, renderTarget.height, 0, glFormat, glType, null );
-			_gl.bindFramebuffer( _gl.FRAMEBUFFER, framebuffer );
-			_gl.framebufferTexture2D( _gl.FRAMEBUFFER, attachment, textureTarget, properties.get( renderTarget.texture ).__webglTexture, 0 );
-			_gl.bindFramebuffer( _gl.FRAMEBUFFER, null );
+			_gl.bindFramebuffer(_gl.FRAMEBUFFER, framebuffer);
+			_gl.framebufferTexture2D(_gl.FRAMEBUFFER, attachment, textureTarget, texture.__webglTexture || texture, 0 );
 
 		}
 
@@ -20289,7 +20321,7 @@
 
 			}
 
-			_gl.bindRenderbuffer( _gl.RENDERBUFFER, null );
+			// _gl.bindRenderbuffer( _gl.RENDERBUFFER, null );
 
 		}
 
@@ -20385,14 +20417,17 @@
 			var renderTargetProperties = properties.get( renderTarget );
 			var textureProperties = properties.get( renderTarget.texture );
 
-			renderTarget.addEventListener( 'dispose', onRenderTargetDispose );
+			renderTarget.addEventListener('dispose', onRenderTargetDispose);
 
 			textureProperties.__webglTexture = _gl.createTexture();
 
 			info.memory.textures ++;
 
 			var isCube = ( renderTarget.isWebGLRenderTargetCube === true );
-			var isTargetPowerOfTwo = isPowerOfTwo( renderTarget );
+			var isTargetPowerOfTwo = isPowerOfTwo(renderTarget);
+			
+			var ext = extensions.get('WEBGL_draw_buffers');
+			var glAttachmentBase = ext ? ext.COLOR_ATTACHMENT0_WEBGL : _gl.COLOR_ATTACHMENT0;
 
 			// Setup framebuffer
 
@@ -20435,17 +20470,59 @@
 
 			} else {
 
-				state.bindTexture( _gl.TEXTURE_2D, textureProperties.__webglTexture );
-				setTextureParameters( _gl.TEXTURE_2D, renderTarget.texture, isTargetPowerOfTwo );
-				setupFrameBufferTexture( renderTargetProperties.__webglFramebuffer, renderTarget, _gl.COLOR_ATTACHMENT0, _gl.TEXTURE_2D );
+				state.bindTexture(_gl.TEXTURE_2D, textureProperties.__webglTexture);
+				setTextureParameters(_gl.TEXTURE_2D, renderTarget.texture, isTargetPowerOfTwo);
+				setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, glAttachmentBase, _gl.TEXTURE_2D);
 
-				if ( textureNeedsGenerateMipmaps( renderTarget.texture, isTargetPowerOfTwo ) ) {
+				if (textureNeedsGenerateMipmaps(renderTarget.texture, isTargetPowerOfTwo)) {
 
-					generateMipmap( _gl.TEXTURE_2D, renderTarget.texture, renderTarget.width, renderTarget.height );
+					generateMipmap(_gl.TEXTURE_2D, renderTarget.texture, renderTarget.width, renderTarget.height);
 
 				}
 
-				state.bindTexture( _gl.TEXTURE_2D, null );
+				var numAttached = 1;
+
+				for (var i = 0; i < renderTarget.drawBuffersTextures.length; i++) {
+
+					if (numAttached >= capabilities.maxDrawBuffers) {
+
+						console.warn('WebGLRenderer: rendertarget has too many color textures - this GPU supports ' + capabilities.maxDrawBuffers);
+
+						break;
+
+					}
+
+					var texture = renderTarget.drawBuffersTextures[i];
+					var textureProperties = properties.get(texture);
+					textureProperties.__webglTexture = _gl.createTexture();
+					textureProperties.format = texture.format;
+					textureProperties.type = texture.type;
+
+					state.bindTexture(_gl.TEXTURE_2D, textureProperties.__webglTexture);
+					setTextureParameters(_gl.TEXTURE_2D, texture, isTargetPowerOfTwo);
+					setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, glAttachmentBase + numAttached, _gl.TEXTURE_2D, textureProperties);
+
+					numAttached++;
+
+				}
+
+				if (ext) {
+
+					var drawBuffers = [];
+
+					for (var i = 0; i < numAttached; i++) {
+
+						drawBuffers[i] = ext.COLOR_ATTACHMENT0_WEBGL + i;
+
+					}
+
+					ext.drawBuffersWEBGL(drawBuffers);
+
+				}
+
+				state.bindTexture(_gl.TEXTURE_2D, null);
+				_gl.bindFramebuffer(_gl.FRAMEBUFFER, null);
+				// _gl.bindRenderbuffer(_gl.RENDERBUFFER, null);
 
 			}
 
@@ -20463,6 +20540,20 @@
 
 			var texture = renderTarget.texture;
 			var isTargetPowerOfTwo = isPowerOfTwo( renderTarget );
+
+			for (var i = 0; i < renderTarget.drawBuffersTextures.length; i++) {
+
+				var texture = renderTarget.drawBuffersTextures[i];
+
+				if (textureNeedsGenerateMipmaps(texture, isTargetPowerOfTwo)) {
+
+					state.bindTexture(target, texture);
+					generateMipmap(target, texture, renderTarget.width, renderTarget.height);
+					state.bindTexture(target, null);
+
+				}
+
+			}
 
 			if ( textureNeedsGenerateMipmaps( texture, isTargetPowerOfTwo ) ) {
 
@@ -21343,6 +21434,7 @@
 
 			extensions = new WebGLExtensions( _gl );
 			extensions.get( 'WEBGL_depth_texture' );
+			extensions.get( 'WEBGL_draw_buffers' );
 			extensions.get( 'OES_texture_float' );
 			extensions.get( 'OES_texture_float_linear' );
 			extensions.get( 'OES_texture_half_float' );
@@ -23539,7 +23631,7 @@
 
 			if ( renderTarget && properties.get( renderTarget ).__webglFramebuffer === undefined ) {
 
-				textures.setupRenderTarget( renderTarget );
+				textures.setupRenderTarget(renderTarget);
 
 			}
 
@@ -25201,6 +25293,61 @@
 	DepthTexture.prototype = Object.create( Texture.prototype );
 	DepthTexture.prototype.constructor = DepthTexture;
 	DepthTexture.prototype.isDepthTexture = true;
+
+	function TextureParams(options) {
+
+	  options = options || {};
+
+	  this.mapping = options.mapping !== undefined ? options.mapping : TextureParams.DEFAULT_MAPPING;
+
+	  this.wrapS = options.wrapS !== undefined ? options.wrapS : ClampToEdgeWrapping;
+	  this.wrapT = options.wrapT !== undefined ? options.wrapT : ClampToEdgeWrapping;
+
+	  this.magFilter = options.magFilter !== undefined ? options.magFilter : LinearFilter;
+	  this.minFilter = options.minFilter !== undefined ? options.minFilter : LinearMipMapLinearFilter;
+
+	  this.anisotropy = options.anisotropy !== undefined ? options.anisotropy : 1;
+
+	  this.format = options.format !== undefined ? options.format : RGBAFormat;
+	  this.type = options.type !== undefined ? options.type : UnsignedByteType;
+
+	  this.encoding = options.encoding !== undefined ? options.encoding : LinearEncoding;
+
+	  this.offset = new Vector2(0, 0);
+	  if (options.offset !== undefined) this.offset.copy(options.offset);
+	  this.repeat = new Vector2(1, 1);
+	  if (options.repeat !== undefined) this.repeat.copy(options.repeat);
+	  this.center = new Vector2(0, 0);
+	  if (options.center !== undefined) this.center.copy(options.center);
+
+	  this.rotation = 0;
+
+	  this.generateMipmaps = options.generateMipmaps !== undefined ? options.generateMipmaps : true;
+
+	}
+	TextureParams.prototype = {
+
+	  constructor: TextureParams,
+
+	  clone: function (params) {
+
+	    if (params === undefined) {
+
+	      return new TextureParams(this);
+
+	    } else {
+
+	      TextureParams.call(params, this);
+
+	      return params;
+
+	    }
+
+	  }
+
+	};
+
+	TextureParams.DEFAULT_MAPPING = UVMapping;
 
 	/**
 	 * @author mrdoob / http://mrdoob.com/
@@ -29688,7 +29835,7 @@
 
 
 
-	var Geometries = Object.freeze({
+	var Geometries = /*#__PURE__*/Object.freeze({
 		WireframeGeometry: WireframeGeometry,
 		ParametricGeometry: ParametricGeometry,
 		ParametricBufferGeometry: ParametricBufferGeometry,
@@ -30458,7 +30605,7 @@
 
 
 
-	var Materials = Object.freeze({
+	var Materials = /*#__PURE__*/Object.freeze({
 		ShadowMaterial: ShadowMaterial,
 		SpriteMaterial: SpriteMaterial,
 		RawShaderMaterial: RawShaderMaterial,
@@ -31148,6 +31295,7 @@
 	 * @author mrdoob / http://mrdoob.com/
 	 */
 
+
 	function ImageLoader( manager ) {
 
 		this.manager = ( manager !== undefined ) ? manager : DefaultLoadingManager;
@@ -31249,6 +31397,7 @@
 	 * @author mrdoob / http://mrdoob.com/
 	 */
 
+
 	function CubeTextureLoader( manager ) {
 
 		this.manager = ( manager !== undefined ) ? manager : DefaultLoadingManager;
@@ -31318,6 +31467,7 @@
 	/**
 	 * @author mrdoob / http://mrdoob.com/
 	 */
+
 
 	function TextureLoader( manager ) {
 
@@ -32039,9 +32189,7 @@
 	//
 
 	var tmp = new Vector3();
-	var px = new CubicPoly();
-	var py = new CubicPoly();
-	var pz = new CubicPoly();
+	var px = new CubicPoly(), py = new CubicPoly(), pz = new CubicPoly();
 
 	function CatmullRomCurve3( points, closed, curveType, tension ) {
 
@@ -32826,7 +32974,7 @@
 
 
 
-	var Curves = Object.freeze({
+	var Curves = /*#__PURE__*/Object.freeze({
 		ArcCurve: ArcCurve,
 		CatmullRomCurve3: CatmullRomCurve3,
 		CubicBezierCurve: CubicBezierCurve,
@@ -37564,6 +37712,7 @@
 	 * @author thespite / http://clicktorelease.com/
 	 */
 
+
 	function ImageBitmapLoader( manager ) {
 
 		if ( typeof createImageBitmap === 'undefined' ) {
@@ -37944,6 +38093,7 @@
 	 * @author zz85 / http://www.lab4games.net/zz85/blog
 	 * @author mrdoob / http://mrdoob.com/
 	 */
+
 
 	function Font( data ) {
 
@@ -43971,8 +44121,7 @@
 	 *  headWidth - Number
 	 */
 
-	var lineGeometry;
-	var coneGeometry;
+	var lineGeometry, coneGeometry;
 
 	function ArrowHelper( dir, origin, length, color, headLength, headWidth ) {
 
@@ -45900,6 +46049,7 @@
 	exports.CubeTexture = CubeTexture;
 	exports.CanvasTexture = CanvasTexture;
 	exports.DepthTexture = DepthTexture;
+	exports.TextureParams = TextureParams;
 	exports.Texture = Texture;
 	exports.CompressedTextureLoader = CompressedTextureLoader;
 	exports.DataTextureLoader = DataTextureLoader;

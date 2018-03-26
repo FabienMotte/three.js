@@ -28,11 +28,25 @@ function WebGLRenderTarget( width, height, options ) {
 
 	if ( options.minFilter === undefined ) options.minFilter = LinearFilter;
 
-	this.texture = new Texture( undefined, undefined, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding );
+	this.texture = new Texture(undefined, undefined, options.wrapS, options.wrapT, options.magFilter, options.minFilter, options.format, options.type, options.anisotropy, options.encoding);
+
+	if (options.generateMipmaps === undefined) options.generateMipmaps = false;
+	this.texture.generateMipmaps = options.generateMipmaps;
 
 	this.depthBuffer = options.depthBuffer !== undefined ? options.depthBuffer : true;
 	this.stencilBuffer = options.stencilBuffer !== undefined ? options.stencilBuffer : true;
 	this.depthTexture = options.depthTexture !== undefined ? options.depthTexture : null;
+
+	this.drawBuffersTextures = [];
+
+	if (options.drawBuffersTextures !== undefined) {
+
+		for (var i = 0; i < options.drawBuffersTextures.length; i++) {
+
+			this.drawBuffersTextures[i] = options.drawBuffersTextures[i].clone();
+			
+		}
+	}
 
 }
 
@@ -48,7 +62,7 @@ WebGLRenderTarget.prototype = Object.assign( Object.create( EventDispatcher.prot
 
 			this.width = width;
 			this.height = height;
-
+			
 			this.dispose();
 
 		}

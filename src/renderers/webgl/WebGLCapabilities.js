@@ -82,6 +82,9 @@ function WebGLCapabilities( gl, extensions, parameters ) {
 	var floatFragmentTextures = !! extensions.get( 'OES_texture_float' );
 	var floatVertexTextures = vertexTextures && floatFragmentTextures;
 
+	var drawBuffers = extensions.get('WEBGL_draw_buffers')
+	var maxDrawBuffers = drawBuffers ? gl.getParameter(drawBuffers.MAX_DRAW_BUFFERS_WEBGL) : 1;
+
 	return {
 
 		getMaxAnisotropy: getMaxAnisotropy,
@@ -102,7 +105,9 @@ function WebGLCapabilities( gl, extensions, parameters ) {
 
 		vertexTextures: vertexTextures,
 		floatFragmentTextures: floatFragmentTextures,
-		floatVertexTextures: floatVertexTextures
+		floatVertexTextures: floatVertexTextures,
+
+		maxDrawBuffers: maxDrawBuffers
 
 	};
 

@@ -237,6 +237,7 @@ function WebGLRenderer( parameters ) {
 
 		extensions = new WebGLExtensions( _gl );
 		extensions.get( 'WEBGL_depth_texture' );
+		extensions.get( 'WEBGL_draw_buffers' );
 		extensions.get( 'OES_texture_float' );
 		extensions.get( 'OES_texture_float_linear' );
 		extensions.get( 'OES_texture_half_float' );
@@ -2433,7 +2434,7 @@ function WebGLRenderer( parameters ) {
 
 		if ( renderTarget && properties.get( renderTarget ).__webglFramebuffer === undefined ) {
 
-			textures.setupRenderTarget( renderTarget );
+			textures.setupRenderTarget(renderTarget);
 
 		}
 
