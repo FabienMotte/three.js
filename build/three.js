@@ -23501,13 +23501,13 @@
 
 		function markUniformsLightsNeedsUpdate( uniforms, value ) {
 
-			uniforms.ambientLightColor.needsUpdate = value;
+			if (uniforms.ambientLightColor) uniforms.ambientLightColor.needsUpdate = value;
 
-			uniforms.directionalLights.needsUpdate = value;
-			uniforms.pointLights.needsUpdate = value;
-			uniforms.spotLights.needsUpdate = value;
-			uniforms.rectAreaLights.needsUpdate = value;
-			uniforms.hemisphereLights.needsUpdate = value;
+			if (uniforms.directionalLights) uniforms.directionalLights.needsUpdate = value;
+			if (uniforms.pointLights) uniforms.pointLights.needsUpdate = value;
+			if (uniforms.spotLights) uniforms.spotLights.needsUpdate = value;
+			if (uniforms.rectAreaLights) uniforms.rectAreaLights.needsUpdate = value;
+			if (uniforms.hemisphereLights) uniforms.hemisphereLights.needsUpdate = value;
 
 		}
 
