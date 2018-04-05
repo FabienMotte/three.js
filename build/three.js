@@ -17959,15 +17959,15 @@
 
 		this.enabled = false;
 
-		this.autoUpdate = true;
-		this.needsUpdate = false;
+		// this.autoUpdate = true;
+		// this.needsUpdate = false;
 
 		this.type = PCFShadowMap;
 
 		this.render = function ( lights, scene, camera ) {
 
 			if ( scope.enabled === false ) return;
-			if ( scope.autoUpdate === false && scope.needsUpdate === false ) return;
+			// if ( scope.autoUpdate === false && scope.needsUpdate === false ) return;
 
 			if ( lights.length === 0 ) return;
 
@@ -18127,7 +18127,7 @@
 
 			}
 
-			scope.needsUpdate = false;
+			// scope.needsUpdate = false;
 
 		};
 
@@ -22326,9 +22326,9 @@
 
 			if ( _clippingEnabled ) _clipping.beginShadows();
 
-			var shadowsArray = currentRenderState.state.shadowsArray;
+			// var shadowsArray = currentRenderState.state.shadowsArray;
 
-			shadowMap.render( shadowsArray, scene, camera );
+			// shadowMap.render( shadowsArray, scene, camera );
 
 			currentRenderState.setupLights( camera );
 
