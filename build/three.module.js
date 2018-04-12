@@ -22947,7 +22947,7 @@ function WebGLRenderer( parameters ) {
 
 				var bones = skeleton.bones;
 
-				if ( capabilities.floatVertexTextures ) {
+				if ( skeleton.useTexture && capabilities.floatVertexTextures ) {
 
 					if ( skeleton.boneTexture === undefined ) {
 
@@ -24207,7 +24207,9 @@ function Skeleton( bones, boneInverses ) {
 	bones = bones || [];
 
 	this.bones = bones.slice( 0 );
-	this.boneMatrices = new Float32Array( this.bones.length * 16 );
+	this.boneMatrices = new Float32Array(this.bones.length * 16);
+	
+	this.useTexture = false;
 
 	// use the supplied bone inverses or calculate the inverses
 

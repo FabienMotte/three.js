@@ -1756,7 +1756,7 @@ function WebGLRenderer( parameters ) {
 
 				var bones = skeleton.bones;
 
-				if ( capabilities.floatVertexTextures ) {
+				if ( skeleton.useTexture && capabilities.floatVertexTextures ) {
 
 					if ( skeleton.boneTexture === undefined ) {
 
