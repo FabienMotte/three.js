@@ -845,7 +845,8 @@ function WebGLTextures( _gl, extensions, state, properties, capabilities, utils,
 				textureProperties.format = texture.format
 				textureProperties.type = texture.type
 
-				state.bindTexture(_gl.TEXTURE_2D, textureProperties.__webglTexture);
+				setTexture2D(texture, 0);
+
 				setTextureParameters(_gl.TEXTURE_2D, texture, isTargetPowerOfTwo);
 				setupFrameBufferTexture(renderTargetProperties.__webglFramebuffer, renderTarget, glAttachmentBase + numAttached, _gl.TEXTURE_2D, textureProperties);
 
