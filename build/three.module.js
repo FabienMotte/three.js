@@ -14923,11 +14923,11 @@ function WebGLExtensions( gl ) {
 
 			}
 
-			if ( extension === null ) {
+			// if ( extension === null ) {
 
-				console.warn( 'THREE.WebGLRenderer: ' + name + ' extension not supported.' );
+				// console.warn( 'THREE.WebGLRenderer: ' + name + ' extension not supported.' );
 
-			}
+			// }
 
 			extensions[ name ] = extension;
 
