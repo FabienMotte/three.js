@@ -17953,15 +17953,15 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 	this.enabled = false;
 
-	// this.autoUpdate = true;
-	// this.needsUpdate = false;
+	this.autoUpdate = true;
+	this.needsUpdate = false;
 
 	this.type = PCFShadowMap;
 
 	this.render = function ( lights, scene, camera ) {
 
 		if ( scope.enabled === false ) return;
-		// if ( scope.autoUpdate === false && scope.needsUpdate === false ) return;
+		if ( scope.autoUpdate === false && scope.needsUpdate === false ) return;
 
 		if ( lights.length === 0 ) return;
 
@@ -18123,7 +18123,7 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 		}
 
-		// scope.needsUpdate = false;
+		scope.needsUpdate = false;
 
 	};
 
