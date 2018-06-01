@@ -17992,6 +17992,8 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 			}
 
+			if (!shadow.needsUpdate) continue;
+
 			var shadowCamera = shadow.camera;
 
 			_shadowMapSize.copy( shadow.mapSize );
