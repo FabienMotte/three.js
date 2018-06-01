@@ -16833,7 +16833,7 @@
 			var skeleton = object.skeleton;
 			var bones = skeleton.bones;
 
-			if ( capabilities.floatVertexTextures ) {
+			if ( skeleton.useTexture && capabilities.floatVertexTextures ) {
 
 				return 1024;
 
