@@ -22329,9 +22329,9 @@
 
 			if ( _clippingEnabled ) _clipping.beginShadows();
 
-			// var shadowsArray = currentRenderState.state.shadowsArray;
+			var shadowsArray = currentRenderState.state.shadowsArray;
 
-			// shadowMap.render( shadowsArray, scene, camera );
+			shadowMap.render( shadowsArray, scene, camera );
 
 			currentRenderState.setupLights( camera );
 
