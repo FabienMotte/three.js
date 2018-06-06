@@ -18117,7 +18117,7 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 				// set object matrices & frustum culling
 
-				renderObject( scene, camera, shadowCamera, isPointLight );
+				renderObject( scene, camera, shadowCamera, shadow, isPointLight );
 
 			}
 
@@ -18237,9 +18237,14 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 	}
 
-	function renderObject( object, camera, shadowCamera, isPointLight ) {
+	function renderObject( object, camera, shadowCamera, shadow, isPointLight ) {
 
-		if ( object.visible === false ) return;
+		var shadowWhitelist = shadow.whitelist;
+
+		if (
+			object.visible === false ||
+			(shadowWhitelist.length && shadowWhitelist.indexOf(object.name) === -1)
+		) return;
 
 		var visible = object.layers.test( camera.layers );
 
