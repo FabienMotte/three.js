@@ -425,7 +425,7 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 
 		for ( var i = 0, l = children.length; i < l; i ++ ) {
 
-			renderObject( children[ i ], camera, shadowCamera, isPointLight );
+			renderObject( children[ i ], camera, shadowCamera, shadow, isPointLight );
 
 		}
 
