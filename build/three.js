@@ -18249,7 +18249,7 @@
 
 			if (
 				object.visible === false ||
-				(shadowWhitelist.length && shadowWhitelist.indexOf(object.name) === -1)
+				(shadowWhitelist && shadowWhitelist.length && shadowWhitelist.indexOf(object.name) === -1)
 			) return;
 
 			var visible = object.layers.test( camera.layers );
