@@ -373,17 +373,14 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 	}
 
 	function renderObject( object, camera, shadowCamera, shadow, isPointLight ) {
-
-		var shadowWhitelist = shadow.whitelist
-
-		if (
-			object.visible === false ||
-			(shadowWhitelist && shadowWhitelist.length && shadowWhitelist.indexOf(object.name) === -1)
-		) return;
+		
+		if ( object.visible === false ) return;
 
 		var visible = object.layers.test( camera.layers );
+		var shadowWhitelist = shadow.whitelist;
+		var whitelisted = shadowWhitelist && shadowWhitelist.indexOf( object.name ) !== -1;
 
-		if ( visible && ( object.isMesh || object.isLine || object.isPoints ) ) {
+		if ( visible && ( whitelisted || !shadowWhitelist ) && ( object.isMesh || object.isLine || object.isPoints ) ) {
 
 			if ( object.castShadow && ( ! object.frustumCulled || _frustum.intersectsObject( object ) ) ) {
 
