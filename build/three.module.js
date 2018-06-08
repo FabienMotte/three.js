@@ -18242,10 +18242,18 @@ function WebGLShadowMap( _renderer, _objects, maxTextureSize ) {
 		if ( object.visible === false ) return;
 
 		var visible = object.layers.test( camera.layers );
+		
 		var shadowWhitelist = shadow.whitelist;
 		var whitelisted = shadowWhitelist && shadowWhitelist.indexOf( object.name ) !== -1;
 
-		if ( visible && ( whitelisted || !shadowWhitelist ) && ( object.isMesh || object.isLine || object.isPoints ) ) {
+		var shadowBlacklist = shadow.blacklist;
+		var blacklisted = shadowBlacklist && shadowBlacklist.indexOf( object.name ) !== -1;
+
+		if (visible &&
+			( whitelisted || !shadowWhitelist ) &&
+			( !blacklisted || !shadowBlacklist ) &&
+			( object.isMesh || object.isLine || object.isPoints )
+		) {
 
 			if ( object.castShadow && ( ! object.frustumCulled || _frustum.intersectsObject( object ) ) ) {
 
